@@ -4813,7 +4813,9 @@ static struct cpufreq_frequency_table freq_table_1p3GHz[] = {
 	{ 9, 1100000 },
 	{10, 1200000 },
 	{11, 1300000 },
-	{12, CPUFREQ_TABLE_END },
+    {12, 1400000 },
+    {13, 1500000 },
+	{14, CPUFREQ_TABLE_END },
 };
 
 static struct cpufreq_frequency_table freq_table_1p4GHz[] = {
@@ -4873,7 +4875,7 @@ static struct cpufreq_frequency_table freq_table_1p7GHz[] = {
 static struct tegra_cpufreq_table_data cpufreq_tables[] = {
 	{ freq_table_300MHz, 0,  1 },
 	{ freq_table_1p0GHz, 2,  8 },
-	{ freq_table_1p3GHz, 2, 10 },
+	{ freq_table_1p3GHz, 2, 12 },
 	{ freq_table_1p4GHz, 2, 11 },
 	{ freq_table_1p5GHz, 2, 12 },
 	{ freq_table_1p7GHz, 2, 12 },

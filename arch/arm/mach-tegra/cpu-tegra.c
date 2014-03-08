@@ -51,9 +51,10 @@
 #define SYSTEM_NORMAL_MODE	(0)
 #define SYSTEM_BALANCE_MODE	(1)
 #define SYSTEM_PWRSAVE_MODE	(2)
-#define SYSTEM_MODE_END 		(SYSTEM_PWRSAVE_MODE + 1)
+#define SYSTEM_OVERCLOCK_MODE	(3)
+#define SYSTEM_MODE_END 		(SYSTEM_OVERCLOCK_MODE + 1)
 #define SYSTEM_PWRSAVE_MODE_MAX_FREQ	(1000000)
-unsigned int power_mode_table[SYSTEM_MODE_END] = {1000000,1200000,1400000};
+unsigned int power_mode_table[SYSTEM_MODE_END] = {1000000,1200000,1400000,1000000};
 
 #define CAMERA_ENABLE_EMC_MINMIAM_RATE (667000000)
 /* tegra throttling and edp governors require frequencies in the table
@@ -256,7 +257,7 @@ static int system_mode_set(const char *arg, const struct kernel_param *kp)
 	if (ret == 0) {
 		printk("system_mode_set system_mode=%u\n",system_mode);
 
-		if((system_mode < SYSTEM_NORMAL_MODE) || (system_mode > SYSTEM_PWRSAVE_MODE))
+		if((system_mode < SYSTEM_NORMAL_MODE) || (system_mode > SYSTEM_OVERCLOCK_MODE))
 			system_mode = SYSTEM_NORMAL_MODE;
 
 		tegra_cpu_set_speed_cap(NULL);
@@ -331,13 +332,15 @@ module_param_cb(enable_pwr_save, &tegra_pwr_save_ops, &pwr_save, 0644);
 		new_speed = power_mode_table[SYSTEM_PWRSAVE_MODE];
 	else  if((system_mode == SYSTEM_NORMAL_MODE) && (requested_speed > power_mode_table[SYSTEM_NORMAL_MODE]))
 		new_speed = power_mode_table[SYSTEM_NORMAL_MODE];
+    else  if( (system_mode==SYSTEM_OVERCLOCK_MODE ) && ( requested_speed > power_mode_table[SYSTEM_OVERCLOCK_MODE] ))
+		new_speed=power_mode_table[SYSTEM_OVERCLOCK_MODE] ;   
 
 	return new_speed;
 }
 
 static unsigned int cpu_user_cap;
 
-static inline void _cpu_user_cap_set_locked(void)
+/*static inline void _cpu_user_cap_set_locked(void)
 {
 #ifndef CONFIG_TEGRA_CPU_CAP_EXACT_FREQ
 	if (cpu_user_cap != 0) {
@@ -361,7 +364,7 @@ void tegra_cpu_user_cap_set(unsigned int speed_khz)
 	_cpu_user_cap_set_locked();
 
 	mutex_unlock(&tegra_cpu_lock);
-}
+}*/
 
 static int cpu_user_cap_set(const char *arg, const struct kernel_param *kp)
 {
@@ -370,9 +373,22 @@ static int cpu_user_cap_set(const char *arg, const struct kernel_param *kp)
 	mutex_lock(&tegra_cpu_lock);
 
 	ret = param_set_uint(arg, kp);
-	if (ret == 0)
-		_cpu_user_cap_set_locked();
-
+	if (ret == 0){
+#ifndef CONFIG_TEGRA_CPU_CAP_EXACT_FREQ
+		if (cpu_user_cap != 0) {
+			int i;
+			for (i = 0; freq_table[i].frequency !=
+				CPUFREQ_TABLE_END; i++) {
+				if (freq_table[i].frequency > cpu_user_cap)
+					break;
+			}
+			i = (i == 0) ? 0 : i - 1;
+			cpu_user_cap = freq_table[i].frequency;
+            pr_info("CPU USER CAP: %d\n", cpu_user_cap);
+		}
+#endif
+		tegra_cpu_set_speed_cap(NULL);
+    }
 	mutex_unlock(&tegra_cpu_lock);
 	return ret;
 }
@@ -1064,6 +1080,7 @@ void rebuild_max_freq_table(unsigned int max_rate)
 	power_mode_table[SYSTEM_NORMAL_MODE] = max_rate;
 	power_mode_table[SYSTEM_BALANCE_MODE] = max_rate - 200000;
 	power_mode_table[SYSTEM_PWRSAVE_MODE] = SYSTEM_PWRSAVE_MODE_MAX_FREQ;
+    power_mode_table[SYSTEM_OVERCLOCK_MODE] = 1500000;
 }
 
 static int tegra_cpu_init(struct cpufreq_policy *policy)
