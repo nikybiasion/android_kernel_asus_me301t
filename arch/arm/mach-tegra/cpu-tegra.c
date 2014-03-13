@@ -477,7 +477,7 @@ static void edp_update_limit(void)
 
 static unsigned int edp_governor_speed(unsigned int requested_speed)
 {
-	if ((!edp_limit) || (requested_speed <= edp_limit))
+	if ((!edp_limit) || (requested_speed <= edp_limit) || (system_mode == SYSTEM_OVERCLOCK_MODE))
 		return requested_speed;
 	else
 		return edp_limit;
