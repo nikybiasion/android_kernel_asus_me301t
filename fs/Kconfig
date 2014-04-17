@@ -281,8 +281,4 @@ endif
 source "fs/nls/Kconfig"
 source "fs/dlm/Kconfig"
 
-config ASYNC_FSYNC
-	bool "asynchronous fsync"
-	default y
-
 endmenu
