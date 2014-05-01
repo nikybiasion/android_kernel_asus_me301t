@@ -51,10 +51,9 @@
 #define SYSTEM_NORMAL_MODE	(0)
 #define SYSTEM_BALANCE_MODE	(1)
 #define SYSTEM_PWRSAVE_MODE	(2)
-#define SYSTEM_OVERCLOCK_MODE	(3)
-#define SYSTEM_MODE_END 		(SYSTEM_OVERCLOCK_MODE + 1)
+#define SYSTEM_MODE_END 		(SYSTEM_PWRSAVE_MODE + 1)
 #define SYSTEM_PWRSAVE_MODE_MAX_FREQ	(1000000)
-unsigned int power_mode_table[SYSTEM_MODE_END] = {1000000,1200000,1400000,1000000};
+unsigned int power_mode_table[SYSTEM_MODE_END] = {1000000,1400000,1500000};
 
 #define CAMERA_ENABLE_EMC_MINMIAM_RATE (667000000)
 /* tegra throttling and edp governors require frequencies in the table
@@ -257,7 +256,7 @@ static int system_mode_set(const char *arg, const struct kernel_param *kp)
 	if (ret == 0) {
 		printk("system_mode_set system_mode=%u\n",system_mode);
 
-		if((system_mode < SYSTEM_NORMAL_MODE) || (system_mode > SYSTEM_OVERCLOCK_MODE))
+		if((system_mode < SYSTEM_NORMAL_MODE) || (system_mode > SYSTEM_PWRSAVE_MODE))
 			system_mode = SYSTEM_NORMAL_MODE;
 
 		tegra_cpu_set_speed_cap(NULL);
@@ -332,8 +331,6 @@ module_param_cb(enable_pwr_save, &tegra_pwr_save_ops, &pwr_save, 0644);
 		new_speed = power_mode_table[SYSTEM_PWRSAVE_MODE];
 	else  if((system_mode == SYSTEM_NORMAL_MODE) && (requested_speed > power_mode_table[SYSTEM_NORMAL_MODE]))
 		new_speed = power_mode_table[SYSTEM_NORMAL_MODE];
-    else  if( (system_mode==SYSTEM_OVERCLOCK_MODE ) && ( requested_speed > power_mode_table[SYSTEM_OVERCLOCK_MODE] ))
-		new_speed=power_mode_table[SYSTEM_OVERCLOCK_MODE] ;   
 
 	return new_speed;
 }
@@ -477,7 +474,7 @@ static void edp_update_limit(void)
 
 static unsigned int edp_governor_speed(unsigned int requested_speed)
 {
-	if ((!edp_limit) || (requested_speed <= edp_limit) || (system_mode == SYSTEM_OVERCLOCK_MODE))
+	if ((!edp_limit) || (requested_speed <= edp_limit) || requested_speed <= 1500000 )
 		return requested_speed;
 	else
 		return edp_limit;
@@ -913,10 +910,10 @@ int tegra_cpu_set_speed_cap(unsigned int *speed_cap)
 	if (is_suspended)
 		return -EBUSY;
 
-       new_speed = ASUS_governor_speed(new_speed);
+        new_speed = ASUS_governor_speed(new_speed);
 	new_speed = tegra_throttle_governor_speed(new_speed);
 	new_speed = edp_governor_speed(new_speed);
-	//new_speed = user_cap_speed(new_speed);
+//	new_speed = user_cap_speed(new_speed);
 	if (speed_cap)
 		*speed_cap = new_speed;
 
@@ -1080,7 +1077,6 @@ void rebuild_max_freq_table(unsigned int max_rate)
 	power_mode_table[SYSTEM_NORMAL_MODE] = max_rate;
 	power_mode_table[SYSTEM_BALANCE_MODE] = max_rate - 200000;
 	power_mode_table[SYSTEM_PWRSAVE_MODE] = SYSTEM_PWRSAVE_MODE_MAX_FREQ;
-    power_mode_table[SYSTEM_OVERCLOCK_MODE] = 1500000;
 }
 
 static int tegra_cpu_init(struct cpufreq_policy *policy)
