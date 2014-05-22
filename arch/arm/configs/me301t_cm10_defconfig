@@ -3031,6 +3031,7 @@ CONFIG_CIFS_XATTR=y
 # CONFIG_NCP_FS is not set
 # CONFIG_CODA_FS is not set
 # CONFIG_AFS_FS is not set
+CONFIG_DYNAMIC_FSYNC=y
 
 #
 # Partition Types
